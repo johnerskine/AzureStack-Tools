@@ -6,6 +6,15 @@
 This module contains utility functions for working with registration resources
 #>
 
+
+<#
+
+.SYNOPSIS
+
+Uses the current Azure Powershell context to retrieve registration resources in Azure from the default resource group
+and with the default resource name (if $AzureStackStampCloudId is provided)
+
+#>
 function Get-AzureRegistrationResource{
 [CmdletBinding()]
 param(
@@ -54,6 +63,15 @@ else
 
 }
 
+
+<#
+
+.SYNOPSIS
+
+If the context is set to the Azure Stack environment administrator this will retrieve the activation record in the Azure Stack
+if it has been created via successful registration run. 
+
+#>
 function Get-AzureStackActivationRecord{
 
 $currentContext = Get-AzureRmContext
@@ -108,6 +126,14 @@ else
 
 }
 
+
+<#
+
+.SYNOPSIS
+
+Sets the current azure powershell context to that of the Azure Stack environment administrator
+
+#>
 function Set-AzureStackPowershellContext{
 [CmdletBinding()]
 param(
@@ -121,10 +147,10 @@ param(
     [String] $ExternalDomain,
 
     [Parameter(Mandatory = $true)]
-    [String] $AadTenantId,
+    [String] $ArmEndpoint,
 
-    [Parameter(Mandatory = $true)]
-    [String] $ArmEndpoint
+    [Parameter(Mandatory = $false)]
+    [String] $AadTenantId
 )
 
     
@@ -153,12 +179,30 @@ param(
 
     $Credential = New-Object System.Management.Automation.PSCredential ($ServiceAdminUsername,(ConvertTo-SecureString -String $ServiceAdminPassword -AsPlainText -Force))
 
-    Add-AzureRmAccount -Environment $environment -Credential $Credential -TenantId $AadTenantId
+    if ($AadTenantId)
+    {
+        Add-AzureRmAccount -Environment $environment -Credential $Credential -TenantId $AadTenantId
+    }
+    else
+    {
+        Add-AzureRmAccount -Environment $environment -Credential $Credential
+    }
 
     $adminSubscription = Get-AzureRmSubscription -SubscriptionName "Default Provider Subscription"
     Set-AzureRmContext -SubscriptionId $adminSubscription.SubscriptionId
 }
 
+################################################################
+# Helper Functions
+################################################################
+
+<#
+
+.SYNOPSIS
+
+Gets the resource manager endpoints for use in the Set-AzureStackPowershellContext function
+
+#>
 function Get-ResourceManagerMetaDataEndpoints{
 param
 (

@@ -1602,7 +1602,7 @@ function Confirm-StampVersion{
         [System.Management.Automation.Runspaces.PSSession] $PSSession
     )
     
-    $registrationVersion = [Version]"1.0.180401.0"
+    $registrationVersion = [Version]"1.1806.0.21"
     try
     {
         Log-Output "Verifying stamp version."
