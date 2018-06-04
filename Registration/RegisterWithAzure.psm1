@@ -198,7 +198,7 @@ function Set-AzsRegistration{
 
     # Configure Azure Bridge
     $servicePrincipal = New-ServicePrincipal -RefreshToken $azureAccountInfo.Token.RefreshToken -AzureEnvironmentName $AzureContext.Environment.Name -TenantId $azureAccountInfo.TenantId -PSSession $session
-    
+
     # Get registration token
     $getTokenParams = @{
         BillingModel                  = $BillingModel
@@ -207,6 +207,11 @@ function Set-AzsRegistration{
         AgreementNumber               = $AgreementNumber
     }
     Log-Output "Get-RegistrationToken parameters: $(ConvertTo-Json $getTokenParams)"
+    if (($BillingModel -eq 'Capacity') -and ($UsageReportingEnabled))
+    {
+        Log-Warning "Billing model is set to Capacity and Usage Reporting is enabled. This data will be used to guide product improvements and will not be used for billing purposes. If this is not desired please halt this operation and rerun with -UsageReportingEnabled:`$false. Execution will continue in 20 seconds."
+        Start-Sleep -Seconds 20        
+    }
     $registrationToken = Get-RegistrationToken @getTokenParams -Session $session -StampInfo $stampInfo
     
     # Register environment with Azure
@@ -402,6 +407,9 @@ Function Get-AzsRegistrationToken{
         [String] $TokenOutputFilePath,
 
         [Parameter(Mandatory = $false)]
+        [Switch] $UsageReportingEnabled = $true,
+
+        [Parameter(Mandatory = $false)]
         [ValidateNotNull()]
         [string] $AgreementNumber
     )
@@ -416,6 +424,12 @@ Function Get-AzsRegistrationToken{
     if(($BillingModel -eq 'Capacity') -and ([String]::IsNullOrEmpty($AgreementNumber)))
     {
         Log-Throw -Message "Agreement number is null or empty when BillingModel is set to Capacity" -CallingFunction $PSCmdlet.MyInvocation.MyCommand.Name
+    }
+
+    if (($BillingModel -eq 'Capacity') -and ($UsageReportingEnabled))
+    {
+        Log-Warning "Billing model is set to Capacity and Usage Reporting is enabled. This data will be used to guide product improvements and will not be used for billing purposes. If this is not desired please halt this operation and rerun with -UsageReportingEnabled:`$false. Execution will continue in 20 seconds."
+        Start-Sleep -Seconds 20     
     }
 
     if ($TokenOutputFilePath -and (-not (Test-Path -Path $TokenOutputFilePath -PathType Leaf)))
