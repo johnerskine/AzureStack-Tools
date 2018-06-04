@@ -726,57 +726,6 @@ Function UnRegister-AzsEnvironment{
 <#
 .SYNOPSIS
 
-Gets the registration name used for registration
-
-.DESCRIPTION
-
-The registration name in Azure is derived from the CloudId of the environment: "AzureStack-<CloudId>". 
-This function gets the CloudId by calling a PEP script and returns the name used during registration
-
-.PARAMETER PrivilegedEndpointCredential
-
-Powershell object that contains credential information i.e. user name and password.The Azure Stack administrator has access to the Privileged Endpoint VM (also known as Emergency Console) to call whitelisted cmdlets and scripts.
-If not supplied script will request manual input of username and password
-
-.PARAMETER PrivilegedEndpoint
-
-Privileged Endpoint VM that performs environment administration actions. Also known as Emergency Console VM.(Example: AzS-ERCS01 for the ASDK)
-
-.EXAMPLE
-
-This example returns the name that was used for registration
-Get-AzsRegistrationName -PrivilegedEndpointCredential $PrivilegedEndpointCredential -PrivilegedEndpoint Azs-ERCS01
-
-#>
-Function Get-AzsRegistrationName{
-[CmdletBinding()]
-    param(
-        [Parameter(Mandatory = $true)]
-        [PSCredential] $PrivilegedEndpointCredential,
-
-        [Parameter(Mandatory = $true)]
-        [String] $PrivilegedEndpoint
-    )
-    #requires -Version 4.0
-    #requires -RunAsAdministrator
-
-    $ErrorActionPreference = [System.Management.Automation.ActionPreference]::Stop
-    $VerbosePreference = [System.Management.Automation.ActionPreference]::Continue
-
-    New-RegistrationLogFile -RegistrationFunction $PSCmdlet.MyInvocation.MyCommand.Name
-
-    Log-Output "*********************** Begin log: $($PSCmdlet.MyInvocation.MyCommand.Name) ***********************`r`n"
-    $session = Initialize-PrivilegedEndpointSession -PrivilegedEndpoint $PrivilegedEndpoint -PrivilegedEndpointCredential $PrivilegedEndpointCredential -Verbose
-    #TODO: Get name based on properties
-    $registrationName = Get-RegistrationName -Session $session
-    Log-Output "Registration name: $registrationName"
-    Log-Output "*********************** End log: $($PSCmdlet.MyInvocation.MyCommand.Name) ***********************`r`n`r`n"
-    return $registrationName
-}
-
-<#
-.SYNOPSIS
-
 Retrieves the ActivationKey from the registration resource created during Register-AzsEnvironment
 
 .DESCRIPTION
@@ -1012,45 +961,7 @@ Function Remove-AzsActivationResource{
 
 #region HelperFunctions
 
-<#
-.SYNOPSIS
 
-Calls the Get-AzureStackStampInformation PEP script and returns the name used for the registration resource
-
-#>
-Function Get-RegistrationName{
-[CmdletBinding()]
-    param(
-        [Parameter(Mandatory=$false)]
-        [System.Management.Automation.Runspaces.PSSession] $Session
-    )
-    $currentAttempt = 0
-    $maxAttempt = 3
-    $sleepSeconds = 10 
-    do
-    {
-        try
-        {
-            Log-Output "Retrieving AzureStack stamp information..."
-            $azureStackStampInfo = Invoke-Command -Session $session -ScriptBlock { Get-AzureStackStampInformation }
-            #TODO: Get registration name based on properties
-            $RegistrationName = "AzureStack-$($azureStackStampInfo.CloudId)"
-            Write-Verbose "Registration name: $RegistrationName"
-            return $RegistrationName
-        }
-        catch
-        {
-            Log-Warning "Retrieving AzureStack stamp information failed:`r`n$($_)"
-            Log-Output "Waiting $sleepSeconds seconds and trying again..."
-            $currentAttempt++
-            Start-Sleep -Seconds $sleepSeconds
-            if ($currentAttempt -ge $maxAttempt)
-            {
-                Log-Throw -Message $_ -CallingFunction  $PSCmdlet.MyInvocation.MyCommand.Name
-            }
-        }
-    } while ($currentAttempt -lt $maxAttempt)
-}
 <#
 .SYNOPSIS
 
@@ -1171,23 +1082,6 @@ function New-RegistrationResource{
     $currentAttempt = 0
     $maxAttempt = 3
     $sleepSeconds = 10 
-
-    #TODO: Remove when unneeded
-    <#
-    try 
-    {
-        $bytes = [System.Convert]::FromBase64String($RegistrationToken)
-        $tokenObject = [System.Text.Encoding]::UTF8.GetString($bytes) | ConvertFrom-Json
-        #TODO: Handle the naming convention here to include date or optional naming
-        $registrationName = "AzureStack-$($tokenObject.CloudId)"
-        Log-Output "Registration resource name: $registrationName"
-    }
-    Catch
-    {
-        $registrationName = "AzureStack-CloudIdError-$([Guid]::NewGuid())"
-        Log-Warning "Unable to extract cloud-Id from registration token. Setting registration name to: $registrationName"
-    }
-    #>
 
     Register-AzureStackResourceProvider
 
@@ -1890,7 +1784,6 @@ Export-ModuleMember Unregister-AzsEnvironment
 Export-ModuleMember Get-AzsActivationKey
 Export-ModuleMember New-AzsActivationResource
 Export-ModuleMember Remove-AzsActivationResource
-Export-ModuleMember Get-AzsRegistrationName
 
 # Connected functions
 Export-ModuleMember Set-AzsRegistration
