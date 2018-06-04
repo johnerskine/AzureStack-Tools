@@ -453,7 +453,7 @@ Function Get-AzsRegistrationToken{
         PrivilegedEndpoint            = $PrivilegedEndpoint
         BillingModel                  = $BillingModel
         MarketplaceSyndicationEnabled = $false
-        UsageReportingEnabled         = $false
+        UsageReportingEnabled         = $UsageReportingEnabled
         AgreementNumber               = $AgreementNumber
         TokenOutputFilePath           = $TokenOutputFilePath
     }
